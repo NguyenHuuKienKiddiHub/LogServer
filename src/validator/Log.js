@@ -8,7 +8,7 @@ const dataSchema = Joi.object({
   referer: Joi.string(),
   query: Joi.object(),
   params: Joi.object(),
-  btn: Joi.object(),
+  btn: Joi.string(),
   user: Joi.object({
     id: Joi.number().required(),
     username: Joi.string().required(),
