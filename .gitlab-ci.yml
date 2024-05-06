@@ -1,0 +1,56 @@
+# Ops One AG - Gitlab CD example pipeline
+
+# define the stages in this pipeline
+stages:
+  - test
+  - build_prod
+  - deploy_prod
+
+sast:
+  stage: test
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
+cache:
+  paths:
+    - node_modules
+
+# define the build stage
+build_prod_stage:
+  stage: build_prod
+  # use node docker image as enviroment
+  image: node:22-alpine3.18
+  script:
+    - echo "$DEPLOY_PROD_ENV" > .env
+    # install & build the NuxtJS application
+    - npm install
+  # define artifacts which are shared between stages
+  artifacts:
+    paths:
+      - node_modules/
+
+  # restrict to specific branch
+  only:
+    - main@manhpt/log
+
+
+# define the deploy stage
+deploy_prod_stage:
+  stage: deploy_prod
+  # install needed packages
+  # add the SSH key from the variable SSH_DEPLOY_KEY and disable StrictHostKeyChecking
+  before_script:
+    - mkdir -p ~/.ssh
+    - ssh-keyscan -H '13.212.59.71' >> ~/.ssh/known_hosts
+    - echo "$DEPLOY_PROD_KEY" > ~/.ssh/id_rsa
+    - chmod 700 ~/.ssh/id_rsa
+    - echo "$DEPLOY_PROD_ENV" > .env
+
+  script:
+    - rsync --progress -avzh --exclude='.git' -e "ssh -i ~/.ssh/id_rsa " --rsync-path="sudo rsync" . ubuntu@13.212.59.71:/var/www/html/newApp
+    - ssh -i ~/.ssh/id_rsa ubuntu@13.212.59.71 "cd /var/www/html && sudo mv app tmpApp && sudo mv newApp app && sudo rm -rf tmpApp"
+
+  # restrict to specific branch
+  only:
+    - main@manhpt/log
