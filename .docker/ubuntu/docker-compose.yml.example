@@ -1,0 +1,43 @@
+services:
+  log-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: log-app
+    restart: unless-stopped
+    ports:
+      - '24688:24688'
+    networks:
+      log-vpc:
+    extra_hosts:
+      - "dockerhost:10.13.0.6"
+      - "kiddihub.analytic:10.13.0.6"
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+
+  log-server:
+    image: nginx:1.17.10-alpine
+    container_name: log-server
+    volumes:
+      - ./:/var/www
+      - ./.docker/nginx/conf.d:/etc/nginx/conf.d
+    ports:
+      - '80:80'
+    networks:
+      log-vpc:
+        ipv4_address: 10.13.0.6
+    depends_on:
+      - log-app
+    restart: unless-stopped
+
+networks:
+  log-vpc:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.13.0.0/16
+
+volumes:
+  web-root:
+    driver: local
